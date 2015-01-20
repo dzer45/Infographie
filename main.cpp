@@ -1,8 +1,14 @@
 #include "tgaimage.h"
+#include "geometry.h"
 #include <cmath>
 #include "model.h"
 
+const int width = 800;
+const int height = 800;
+const int depth = 255;
+ 
 Model *model = NULL;
+
 
 void line(TGAImage &image, int x0, int y0, int x1, int y1) {
 	bool steep = false;
@@ -72,17 +78,17 @@ void triangle(TGAImage &image, int x0, int y0, int x1, int y1, int x2, int y2){
 int main() {
 	model = new Model("obj/african_head.obj");
 
-	TGAImage image(900,900, TGAImage::RGB );
+	TGAImage image(width,height, TGAImage::RGB );
 	for( int i=0; i < model->nfaces(); i++) {
 		std::vector<int> face = model -> face(i);
-		Vect3i screen_coords[3];
-		Vect3f world_coords[3];
+		Vec3i screen_coords[3];
+		Vec3f world_coords[3];
 		for ( int j=0; j<3; j++) {
-			Vect3f v = model->vert(face[j]);
-			screen_coord[j] = Vect3i((v.x+1.)*width/2., (v.y+1.)*height/2., (v.z+1.)*depth/2;
+			Vec3f v = model->vert(face[j]);
+			screen_coords[j] = Vec3i((v.x+1.)*width/2., (v.y+1.)*height/2., (v.z+1.)*depth/2);
 		//	world_coords[j] = v ;
 		}
-	line
+//		line
 
 	}
 	

@@ -2,13 +2,13 @@
 #define MODEL_H
 
 #include <vector>
-#include "vect3f.h"
+#include "geometry.h"
 
 
 class Model
 {
 private :
-	std::vector<Vect3f> verts_;
+	std::vector<Vec3f> verts_;
 	std::vector<std::vector<int> > faces_;
 
 public :
@@ -17,7 +17,7 @@ public :
 	~Model();
 	int nverts();
 	int nfaces();
-	Vect3f vert(int i);
+	Vec3f vert(int i);
 	std::vector<int> face(int idx);
 };
 

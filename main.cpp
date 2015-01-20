@@ -1,5 +1,8 @@
 #include "tgaimage.h"
 #include <cmath>
+#include "model.h"
+
+Model *model = NULL;
 
 void line(TGAImage &image, int x0, int y0, int x1, int y1) {
 	bool steep = false;
@@ -33,32 +36,59 @@ void line(TGAImage &image, int x0, int y0, int x1, int y1) {
 }
 
 void triangle(TGAImage &image, int x0, int y0, int x1, int y1, int x2, int y2){
-	line(image, x0, y0, x1, y1);
-	line(image, x1, y1, x2, y2);
 	if (x2<x0) {
   		std::swap(y0,y2);
   		std::swap(x0,x2);
   	}
-  	if (x2<x1){
+  	if (x2<x1) {
     		std::swap(y1,y2);
     		std::swap(x1,x2);
- 	 }
-/*  	for( int x=x0; x<=x1; x++) {
-		float t = (x-x0)/(float)(x1-x0); 
-		int y = y0*(1.-t)+y2*t;
-		line(image, x, y0, x, y);
+ 	}
+	
+  	for( int x=x0; x<=x1; x++) {
+		if ( x0 != x1 ) {
+			float t = (x-x0)/(float)(x1-x0); 
+			float t2 = (x-x0)/(float)(x2-x0);
+			int y = y0*(1.-t)+y1*t;
+			int y3 = y0*(1.-t2)+y2*t2;
+			line(image, x, y, x, y3);
+		}else	
+			line(image, x0, y0, x1, y1);
+			
 	}
 	for( int x=x1; x<=x2; x++ ){
-		float t = (x-x1)/(float)(x2-x1);
-		int y = y1*(1.-t)+y2*t;
-		line(image, x, y2, x, y);
+		if ( x1 != x2) {
+			float t = (x-x1)/(float)(x2-x1);
+			float t2 = (x-x1)/(float)(x2-x0);
+			int y = y1*(1.-t)+y2*t;
+			int y3 = y0*(1.-t2)+y2*t2;
+			line(image, x, y, x, y3);
+		} else
+			line(image, x1, y1, x2, y2);
 	}
-*/
+
 }
+
 int main() {
-	TGAImage image(400, 400, 1);
-//	line(image, 13, 20, 13, 60);
-	triangle(image,16,20,80,55,100,20);
+	model = new Model("obj/african_head.obj");
+
+	TGAImage image(900,900, TGAImage::RGB );
+	for( int i=0; i < model->nfaces(); i++) {
+		std::vector<int> face = model -> face(i);
+		Vect3i screen_coords[3];
+		Vect3f world_coords[3];
+		for ( int j=0; j<3; j++) {
+			Vect3f v = model->vert(face[j]);
+			screen_coord[j] = Vect3i((v.x+1.)*width/2., (v.y+1.)*height/2., (v.z+1.)*depth/2;
+		//	world_coords[j] = v ;
+		}
+	line
+
+	}
+	
+
+
+
 	image.flip_vertically();
 	image.write_tga_file("dump.tga");
 }

@@ -12,7 +12,7 @@ private :
 	std::vector<std::vector<int> > faces_;
 
 public :
-	//Constructeurs
+	//Constructeur
 	Model(const char *filename);
 	~Model();
 	int nverts();

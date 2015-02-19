@@ -1,7 +1,15 @@
-#ifndef __GEOMETRY_H__
-#define __GEOMETRY_H__
-#include <cmath>
+//
+//  geometry.h
+//  
+//
+//  Created by Bachir on 19/02/15.
+//
+//
 
+#ifndef _geometry_h
+#define _geometry_h
+
+#include <cmath>
 
 template <class t> struct Vec2 {
 	union {
@@ -13,9 +21,10 @@ template <class t> struct Vec2 {
 	Vec2(t _u, t _v) : u(_u),v(_v) {}
 	inline Vec2<t> operator +(const Vec2<t> &V) const { return Vec2<t>(u+V.u, v+V.v); }
 	inline Vec2<t> operator -(const Vec2<t> &V) const { return Vec2<t>(u-V.u, v-V.v); }
-	inline Vec2<t> operator *(float f) const { return Vec2<t>(u*f, v*f); }
+	inline Vec2<t> operator *(float f)          const { return Vec2<t>(u*f, v*f); }
 	template <class > friend std::ostream& operator<<(std::ostream& s, Vec2<t>& v);
 };
+
 template <class t> struct Vec3 {
 	union {
 		struct {t x, y, z;};
@@ -27,22 +36,26 @@ template <class t> struct Vec3 {
 	inline Vec3<t> operator ^(const Vec3<t> &v) const { return Vec3<t>(y*v.z-z*v.y, z*v.x-x*v.z, x*v.y-y*v.x); }
 	inline Vec3<t> operator +(const Vec3<t> &v) const { return Vec3<t>(x+v.x, y+v.y, z+v.z); }
 	inline Vec3<t> operator -(const Vec3<t> &v) const { return Vec3<t>(x-v.x, y-v.y, z-v.z); }
-	inline Vec3<t> operator *(float f) const { return Vec3<t>(x*f, y*f, z*f); }
-	inline t operator *(const Vec3<t> &v) const { return x*v.x + y*v.y + z*v.z; }
+	inline Vec3<t> operator *(float f)          const { return Vec3<t>(x*f, y*f, z*f); }
+	inline t       operator *(const Vec3<t> &v) const { return x*v.x + y*v.y + z*v.z; }
 	float norm () const { return std::sqrt(x*x+y*y+z*z); }
 	Vec3<t> & normalize(t l=1) { *this = (*this)*(l/norm()); return *this; }
 	template <class > friend std::ostream& operator<<(std::ostream& s, Vec3<t>& v);
 };
+
 typedef Vec2<float> Vec2f;
-typedef Vec2<int> Vec2i;
+typedef Vec2<int>   Vec2i;
 typedef Vec3<float> Vec3f;
-typedef Vec3<int> Vec3i;
+typedef Vec3<int>   Vec3i;
+
 template <class t> std::ostream& operator<<(std::ostream& s, Vec2<t>& v) {
 	s << "(" << v.x << ", " << v.y << ")\n";
 	return s;
-}
-template <class t> std::ostream& operator<<(std::ostream& s, Vec3<t>& v) {
-	s << "(" << v.x << ", " << v.y << ", " << v.z << ")\n";
-	return s;
-}
+    }
+    
+    template <class t> std::ostream& operator<<(std::ostream& s, Vec3<t>& v) {
+        s << "(" << v.x << ", " << v.y << ", " << v.z << ")\n";
+        return s;
+    }
+    
 #endif //__GEOMETRY_H__

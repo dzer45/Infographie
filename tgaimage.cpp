@@ -91,8 +91,6 @@ bool TGAImage::read_tga_file(const char *filename) {
 	if (header.imagedescriptor & 0x10) {
 		flip_horizontally();
 	}
-//	std::cerr << (int)header.datatypecode << "\n";
-//	std::cerr << header.x_origin << "," << header.y_origin << "\n";
 	std::cerr << width << "x" << height << "/" << bytespp*8 << "\n";
 	in.close();
 	return true;
@@ -317,11 +315,7 @@ void TGAImage::clear() {
 
 bool TGAImage::scale(int w, int h) {
 	if (w<=0 || h<=0 || !data) return false;
-//	clock_t start, stop;
-//	double t = 0.0;
-//	assert((start = clock())!=-1);
 	unsigned char *tdata = new unsigned char[w*h*bytespp];
-//	result = TGAImage(w, h, bpp);
 	int nscanline = 0;
 	int oscanline = 0;
 	int erry = 0;
@@ -349,9 +343,6 @@ bool TGAImage::scale(int w, int h) {
 			nscanline += nlinebytes;
 		}
 	}
-//	stop = clock();
-//	t = (double) (stop-start)/CLOCKS_PER_SEC;
-//	cerr << t << "\n";
 	delete [] data;
 	data = tdata;
 	width = w;

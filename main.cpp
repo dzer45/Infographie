@@ -11,13 +11,16 @@ Matrix Viewport;
 Matrix Projection;
 Matrix ModelView;
 Vec3f varying_intensity;
+mat<2,3,float> varying_uv;
+mat<4,4,float> uniform_M;
+mat<4,4,float> uniform_MIT;
 
 Model *model     = NULL;
 const int width  = 800;
 const int height = 800;
 
-Vec3f light_dir(1,1,1);
-Vec3f       eye(0,-1,3);
+Vec3f light_dir(1,1,0);
+Vec3f       eye(1,1,4);
 Vec3f    center(0,0,0);
 Vec3f        up(0,1,0);
 
@@ -83,9 +86,12 @@ void triangle(Vec4f *pts, TGAImage &image, TGAImage &zbuffer) {
             float w = pts[0][3]*c.x + pts[1][3]*c.y + pts[2][3]*c.z;
             int frag_depth = std::max(0, std::min(255, int(z/w+.5)));
             if (c.x<0 || c.y<0 || c.z<0 || zbuffer.get(P.x, P.y)[0]>frag_depth) continue;
-	    float intensity = varying_intensity*c;   
-            color = TGAColor(255, 255, 255)*intensity;
-            bool discard = false;
+	    	Vec2f uv = varying_uv*c;  
+	    	Vec3f n = proj<3>(uniform_MIT*embed<4>(model->normal(uv))).normalize();
+	    	Vec3f l = proj<3>(uniform_M*embed<4>(light_dir)).normalize();
+	    	float intensity = std::max(0.f,n*l); 
+            	color = model->diffuse(uv)*intensity;
+            	bool discard = false;
             if (!discard) {
                 zbuffer.set(P.x, P.y, TGAColor(frag_depth));
                 image.set(P.x, P.y, color);
@@ -107,21 +113,28 @@ int main(int argc, char** argv) {
     projection(-1.f/(eye-center).norm());
     light_dir.normalize();
 
-    TGAImage image  (width, height, 3);
+    TGAImage image  (width, height, TGAImage::RGB);
+    TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
+    uniform_M = Projection*ModelView;
+    uniform_MIT = (Projection*ModelView).invert_transpose();    
 
     for (int i=0; i<model->nfaces(); i++) {
         Vec4f screen_coords[3];
         for (int j=0; j<3; j++) {
+		varying_uv.set_col(j,model->uv(i,j));
 		Vec4f gl_Vertex = embed<4>(model->vert(i, j));
         	gl_Vertex = Viewport*Projection*ModelView*gl_Vertex;
         	varying_intensity[j] = std::max(0.f, model->normal(i, j)*light_dir);
             	screen_coords[j] = gl_Vertex;
+
         }
         triangle(screen_coords, image, zbuffer);
     }
 
     image.  flip_vertically(); // to place the origin in the bottom left corner of the image
+    zbuffer.flip_vertically();
     image.  write_tga_file("output.tga");
+    zbuffer.write_tga_file("zbuffer.tga");
 
     delete model;
     return 0;

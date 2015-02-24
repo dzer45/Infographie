@@ -7,16 +7,20 @@
 #include "model.h"
 #include "geometry.h"
 
-Matrix Viewport, Projection, ModelView, M, M_inv;
+Matrix Viewport;
+Matrix Projection;
+Matrix ModelView;
 Vec3f varying_intensity;
-mat<2,3,float> varying_uv;
+mat<2,3,float> Uv;
+mat<4,4,float> M;
+mat<4,4,float> M_inv;
 
 Model *model     = NULL;
 const int width  = 800;
 const int height = 800;
 
 Vec3f light_dir(10,1,0);
-Vec3f       cam(1,-1,4);
+Vec3f    cam(1,-1,4);
 Vec3f    center(0,0,0);
 Vec3f        up(0,1,0);
 
@@ -37,8 +41,8 @@ Matrix  projection(float coeff) {
     return Projection;
 }
 
-Matrix  lookat(Vec3f cam, Vec3f center, Vec3f up) {
-    Vec3f z = (cam-center).normalize();
+Matrix  lookat(Vec3f cam , Vec3f center, Vec3f up) {
+    Vec3f z = (cam -center).normalize();
     Vec3f x = cross(up,z).normalize();
     Vec3f y = cross(z,x).normalize();
     ModelView = Matrix::identity();
@@ -51,35 +55,49 @@ Matrix  lookat(Vec3f cam, Vec3f center, Vec3f up) {
     return ModelView;
 }
 
-Vec3f barycentric(Vec2f A, Vec2f B, Vec2f C, Vec2f P) {
-    Vec3f s[2];
-    for (int i=2; i--; ) {
-        s[i][0] = C[i]-A[i];
-        s[i][1] = B[i]-A[i];
-        s[i][2] = A[i]-P[i];
-    }
-    Vec3f u = cross(s[0], s[1]);
-    if (std::abs(u[2])>1e-2) 
-        return Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
-    return Vec3f(-1,1,1); 
-}
 
-void triangle(Vec4f *pts, TGAImage &image) {
+
+void triangle(Vec4f p0, Vec4f p1, Vec4f p2,Vec2f A ,Vec2f B ,Vec2f C , TGAImage &image, TGAImage &zbuffer) {
     Vec2f bboxmin( std::numeric_limits<float>::max(),  std::numeric_limits<float>::max());
     Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
-    for (int i=0; i<3; i++) {
-        for (int j=0; j<2; j++) {
-            bboxmin[j] = std::min(bboxmin[j], pts[i][j]/pts[i][3]);
-            bboxmax[j] = std::max(bboxmax[j], pts[i][j]/pts[i][3]);
-        }
-    }
+    bboxmin[0] = std::min(bboxmin[0], p0[0]/p0[3]);
+    bboxmax[0] = std::max(bboxmax[0], p0[0]/p0[3]);
+    bboxmin[1] = std::min(bboxmin[1], p0[1]/p0[3]);
+    bboxmax[1] = std::max(bboxmax[1], p0[1]/p0[3]);
+
+    bboxmin[0] = std::min(bboxmin[0], p1[0]/p1[3]);
+    bboxmax[0] = std::max(bboxmax[0], p1[0]/p1[3]);
+    bboxmin[1] = std::min(bboxmin[1], p1[1]/p1[3]);
+    bboxmax[1] = std::max(bboxmax[1], p1[1]/p1[3]);
+    
+    bboxmin[0] = std::min(bboxmin[0], p2[0]/p2[3]);
+    bboxmax[0] = std::max(bboxmax[0], p2[0]/p2[3]);
+    bboxmin[1] = std::min(bboxmin[1], p2[1]/p2[3]);
+    bboxmax[1] = std::max(bboxmax[1], p2[1]/p2[3]);
+    
+    Vec3f s[2]; 
+    Vec3f c;
     Vec2i P;
     TGAColor color;
     for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) {
         for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) {
-            Vec3f c = barycentric(proj<2>(pts[0]/pts[0][3]), proj<2>(pts[1]/pts[1][3]), proj<2>(pts[2]/pts[2][3]), proj<2>(P));
-            if (c.x<0 || c.y<0 || c.z<0 ) continue;
-	    	Vec2f uv = varying_uv*c;  
+	  Vec2f P2 = proj<2>(P);
+	  for (int i=2; i--; ) {
+	    s[i][0] = C[i]-A[i];
+	    s[i][1] = B[i]-A[i];
+	    s[i][2] = A[i]-P2[i];
+	  }
+	  Vec3f u = cross(s[0], s[1]);
+	  if (std::abs(u[2])>1e-2){ 
+	    c = Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
+	  }else{
+	    c = Vec3f(-1,1,1); 
+	  }
+          float z = p0[2]*c.x + p1[2]*c.y + p2[2]*c.z;
+          float w = p0[3]*c.x + p1[3]*c.y + p2[3]*c.z;
+          int frag_depth = std::max(0, std::min(255, int(z/w+.5)));
+          if (c.x<0 || c.y<0 || c.z<0 || zbuffer.get(P.x, P.y)[0]>frag_depth) continue;
+	    	Vec2f uv = Uv*c;  
 	    	Vec3f n = proj<3>(M_inv*embed<4>(model->normal(uv))).normalize();
 	    	Vec3f l = proj<3>(M*embed<4>(light_dir)).normalize();
 		Vec3f r = (n*(n*l*2.f)-l).normalize();
@@ -92,6 +110,7 @@ void triangle(Vec4f *pts, TGAImage &image) {
 		}        	
 		bool discard = false;
             if (!discard) {
+                zbuffer.set(P.x, P.y, TGAColor(frag_depth));
                 image.set(P.x, P.y, color);
             }
         }
@@ -106,30 +125,36 @@ int main(int argc, char** argv) {
         model = new Model("obj/african_head.obj");
     }
 
-    lookat(cam, center, up);
+    lookat(cam , center , up);
     viewport(width/8, height/8, width*3/4, height*3/4);
-    projection(-1.f/(cam-center).norm());
+    projection(-1.f/(cam -center).norm());
     light_dir.normalize();
 
     TGAImage image  (width, height, TGAImage::RGB);
+    TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
     M = Projection*ModelView;
-    M_inv = (Projection*ModelView).invert_transpose();    
+    M_inv = M.invert_transpose();    
 
     for (int i=0; i<model->nfaces(); i++) {
-        Vec4f screen_coords[3];
+        Vec4f coords[3];
         for (int j=0; j<3; j++) {
-		varying_uv.set_col(j,model->uv(i,j));
+		Uv.set_col(j,model->uv(i,j));
 		Vec4f transformation = embed<4>(model->vert(i, j));
-        	transformation = Viewport*Projection*ModelView*transformation;
+        	transformation = Viewport*M*transformation;
         	varying_intensity[j] = std::max(0.f, model->normal(i, j)*light_dir);
-            	screen_coords[j] = transformation;
+            	coords[j] = transformation;
 
         }
-        triangle(screen_coords, image);
+	Vec2f A = proj<2>(coords[0]/coords[0][3]);
+    	Vec2f B = proj<2>(coords[1]/coords[1][3]);
+    	Vec2f C = proj<2>(coords[2]/coords[2][3]);
+        triangle(coords[0],coords[1],coords[2],A,B,C, image, zbuffer);
     }
 
     image.  flip_vertically(); // to place the origin in the bottom left corner of the image
+    zbuffer.flip_vertically();
     image.  write_tga_file("output.tga");
+    zbuffer.write_tga_file("zbuffer.tga");
 
     delete model;
     return 0;

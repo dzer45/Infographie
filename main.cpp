@@ -89,9 +89,15 @@ void triangle(Vec4f *pts, TGAImage &image, TGAImage &zbuffer) {
 	    	Vec2f uv = varying_uv*c;  
 	    	Vec3f n = proj<3>(uniform_MIT*embed<4>(model->normal(uv))).normalize();
 	    	Vec3f l = proj<3>(uniform_M*embed<4>(light_dir)).normalize();
-	    	float intensity = std::max(0.f,n*l); 
-            	color = model->diffuse(uv)*intensity;
-            	bool discard = false;
+		Vec3f r = (n*(n*l*2.f)-l).normalize();
+		float spec = pow(std::max(r.z,0.0f),model->specular(uv));
+		float diff = std::max(0.f, n*l);
+	    	TGAColor color2 =model->diffuse(uv);
+            	color = color2 ;
+		for(int i=0;i<3;i++) {
+			color[i] = std::min<float>(5 + color2[i]*(diff+ .6*spec), 255);    
+		}        	
+		bool discard = false;
             if (!discard) {
                 zbuffer.set(P.x, P.y, TGAColor(frag_depth));
                 image.set(P.x, P.y, color);

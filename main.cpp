@@ -57,7 +57,6 @@ Matrix  lookat(Vec3f cam , Vec3f center, Vec3f up) {
 
 
 
-<<<<<<< HEAD
 void triangle(Vec4f p0, Vec4f p1, Vec4f p2,Vec2f A ,Vec2f B ,Vec2f C , TGAImage &image, TGAImage &zbuffer) {
     Vec2f bboxmin( std::numeric_limits<float>::max(),  std::numeric_limits<float>::max());
     Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
@@ -75,20 +74,6 @@ void triangle(Vec4f p0, Vec4f p1, Vec4f p2,Vec2f A ,Vec2f B ,Vec2f C , TGAImage 
     bboxmax[0] = std::max(bboxmax[0], p2[0]/p2[3]);
     bboxmin[1] = std::min(bboxmin[1], p2[1]/p2[3]);
     bboxmax[1] = std::max(bboxmax[1], p2[1]/p2[3]);
-=======
-void triangle(Vec4f *pts, TGAImage &image, TGAImage &zbuffer) {
-    Vec2f bboxmin( std::numeric_limits<float>::max(),  std::numeric_limits<float>::max());
-    Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
-    for (int i=0; i<3; i++) {
-        for (int j=0; j<2; j++) {
-            bboxmin[j] = std::min(bboxmin[j], pts[i][j]/pts[i][3]);
-            bboxmax[j] = std::max(bboxmax[j], pts[i][j]/pts[i][3]);
-        }
-    }
-    Vec2f A = proj<2>(pts[0]/pts[0][3]);
-    Vec2f B = proj<2>(pts[1]/pts[1][3]);
-    Vec2f C = proj<2>(pts[2]/pts[2][3]);
->>>>>>> 543333caf8895cfeb4526acc2d46b8921b72bafa
     
     Vec3f s[2]; 
     Vec3f c;
@@ -108,13 +93,8 @@ void triangle(Vec4f *pts, TGAImage &image, TGAImage &zbuffer) {
 	  }else{
 	    c = Vec3f(-1,1,1); 
 	  }
-<<<<<<< HEAD
           float z = p0[2]*c.x + p1[2]*c.y + p2[2]*c.z;
           float w = p0[3]*c.x + p1[3]*c.y + p2[3]*c.z;
-=======
-          float z = pts[0][2]*c.x + pts[1][2]*c.y + pts[2][2]*c.z;
-          float w = pts[0][3]*c.x + pts[1][3]*c.y + pts[2][3]*c.z;
->>>>>>> 543333caf8895cfeb4526acc2d46b8921b72bafa
           int frag_depth = std::max(0, std::min(255, int(z/w+.5)));
           if (c.x<0 || c.y<0 || c.z<0 || zbuffer.get(P.x, P.y)[0]>frag_depth) continue;
 	    	Vec2f uv = Uv*c;  
@@ -165,14 +145,11 @@ int main(int argc, char** argv) {
             	coords[j] = transformation;
 
         }
-<<<<<<< HEAD
 	Vec2f A = proj<2>(coords[0]/coords[0][3]);
     	Vec2f B = proj<2>(coords[1]/coords[1][3]);
     	Vec2f C = proj<2>(coords[2]/coords[2][3]);
         triangle(coords[0],coords[1],coords[2],A,B,C, image, zbuffer);
-=======
-        triangle(coords, image, zbuffer);
->>>>>>> 543333caf8895cfeb4526acc2d46b8921b72bafa
+
     }
 
     image.  flip_vertically(); // to place the origin in the bottom left corner of the image

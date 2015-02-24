@@ -19,8 +19,8 @@ Model *model     = NULL;
 const int width  = 800;
 const int height = 800;
 
-Vec3f light_dir(1,1,0);
-Vec3f       eye(1,1,4);
+Vec3f light_dir(10,1,0);
+Vec3f       eye(1,-1,4);
 Vec3f    center(0,0,0);
 Vec3f        up(0,1,0);
 

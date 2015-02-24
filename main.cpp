@@ -7,20 +7,16 @@
 #include "model.h"
 #include "geometry.h"
 
-Matrix Viewport;
-Matrix Projection;
-Matrix ModelView;
+Matrix Viewport, Projection, ModelView, M, M_inv;
 Vec3f varying_intensity;
 mat<2,3,float> varying_uv;
-mat<4,4,float> uniform_M;
-mat<4,4,float> uniform_MIT;
 
 Model *model     = NULL;
 const int width  = 800;
 const int height = 800;
 
 Vec3f light_dir(10,1,0);
-Vec3f       eye(1,-1,4);
+Vec3f       cam(1,-1,4);
 Vec3f    center(0,0,0);
 Vec3f        up(0,1,0);
 
@@ -41,8 +37,8 @@ Matrix  projection(float coeff) {
     return Projection;
 }
 
-Matrix  lookat(Vec3f eye, Vec3f center, Vec3f up) {
-    Vec3f z = (eye-center).normalize();
+Matrix  lookat(Vec3f cam, Vec3f center, Vec3f up) {
+    Vec3f z = (cam-center).normalize();
     Vec3f x = cross(up,z).normalize();
     Vec3f y = cross(z,x).normalize();
     ModelView = Matrix::identity();
@@ -68,7 +64,7 @@ Vec3f barycentric(Vec2f A, Vec2f B, Vec2f C, Vec2f P) {
     return Vec3f(-1,1,1); 
 }
 
-void triangle(Vec4f *pts, TGAImage &image, TGAImage &zbuffer) {
+void triangle(Vec4f *pts, TGAImage &image) {
     Vec2f bboxmin( std::numeric_limits<float>::max(),  std::numeric_limits<float>::max());
     Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
     for (int i=0; i<3; i++) {
@@ -82,13 +78,10 @@ void triangle(Vec4f *pts, TGAImage &image, TGAImage &zbuffer) {
     for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) {
         for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) {
             Vec3f c = barycentric(proj<2>(pts[0]/pts[0][3]), proj<2>(pts[1]/pts[1][3]), proj<2>(pts[2]/pts[2][3]), proj<2>(P));
-            float z = pts[0][2]*c.x + pts[1][2]*c.y + pts[2][2]*c.z;
-            float w = pts[0][3]*c.x + pts[1][3]*c.y + pts[2][3]*c.z;
-            int frag_depth = std::max(0, std::min(255, int(z/w+.5)));
-            if (c.x<0 || c.y<0 || c.z<0 || zbuffer.get(P.x, P.y)[0]>frag_depth) continue;
+            if (c.x<0 || c.y<0 || c.z<0 ) continue;
 	    	Vec2f uv = varying_uv*c;  
-	    	Vec3f n = proj<3>(uniform_MIT*embed<4>(model->normal(uv))).normalize();
-	    	Vec3f l = proj<3>(uniform_M*embed<4>(light_dir)).normalize();
+	    	Vec3f n = proj<3>(M_inv*embed<4>(model->normal(uv))).normalize();
+	    	Vec3f l = proj<3>(M*embed<4>(light_dir)).normalize();
 		Vec3f r = (n*(n*l*2.f)-l).normalize();
 		float spec = pow(std::max(r.z,0.0f),model->specular(uv));
 		float diff = std::max(0.f, n*l);
@@ -99,7 +92,6 @@ void triangle(Vec4f *pts, TGAImage &image, TGAImage &zbuffer) {
 		}        	
 		bool discard = false;
             if (!discard) {
-                zbuffer.set(P.x, P.y, TGAColor(frag_depth));
                 image.set(P.x, P.y, color);
             }
         }
@@ -114,33 +106,30 @@ int main(int argc, char** argv) {
         model = new Model("obj/african_head.obj");
     }
 
-    lookat(eye, center, up);
+    lookat(cam, center, up);
     viewport(width/8, height/8, width*3/4, height*3/4);
-    projection(-1.f/(eye-center).norm());
+    projection(-1.f/(cam-center).norm());
     light_dir.normalize();
 
     TGAImage image  (width, height, TGAImage::RGB);
-    TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
-    uniform_M = Projection*ModelView;
-    uniform_MIT = (Projection*ModelView).invert_transpose();    
+    M = Projection*ModelView;
+    M_inv = (Projection*ModelView).invert_transpose();    
 
     for (int i=0; i<model->nfaces(); i++) {
         Vec4f screen_coords[3];
         for (int j=0; j<3; j++) {
 		varying_uv.set_col(j,model->uv(i,j));
-		Vec4f gl_Vertex = embed<4>(model->vert(i, j));
-        	gl_Vertex = Viewport*Projection*ModelView*gl_Vertex;
+		Vec4f transformation = embed<4>(model->vert(i, j));
+        	transformation = Viewport*Projection*ModelView*transformation;
         	varying_intensity[j] = std::max(0.f, model->normal(i, j)*light_dir);
-            	screen_coords[j] = gl_Vertex;
+            	screen_coords[j] = transformation;
 
         }
-        triangle(screen_coords, image, zbuffer);
+        triangle(screen_coords, image);
     }
 
     image.  flip_vertically(); // to place the origin in the bottom left corner of the image
-    zbuffer.flip_vertically();
     image.  write_tga_file("output.tga");
-    zbuffer.write_tga_file("zbuffer.tga");
 
     delete model;
     return 0;

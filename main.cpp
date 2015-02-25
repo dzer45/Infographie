@@ -13,7 +13,6 @@ Matrix ModelView;
 Vec3f varying_intensity;
 mat<2,3,float> Uv;
 mat<4,4,float> M;
-mat<4,4,float> M_inv;
 
 Model *model     = NULL;
 const int width  = 800;
@@ -98,7 +97,7 @@ void triangle(Vec4f p0, Vec4f p1, Vec4f p2,Vec2f A ,Vec2f B ,Vec2f C , TGAImage 
           int frag_depth = std::max(0, std::min(255, int(z/w+.5)));
           if (c.x<0 || c.y<0 || c.z<0 || zbuffer.get(P.x, P.y)[0]>frag_depth) continue;
 	    	Vec2f uv = Uv*c;  
-	    	Vec3f n = proj<3>(M_inv*embed<4>(model->normal(uv))).normalize();
+	    	Vec3f n = proj<3>(embed<4>(model->normal(uv))).normalize();
 	    	Vec3f l = proj<3>(M*embed<4>(light_dir)).normalize();
 		Vec3f r = (n*(n*l*2.f)-l).normalize();
 		float spec = pow(std::max(r.z,0.0f),model->specular(uv));
@@ -132,8 +131,7 @@ int main(int argc, char** argv) {
 
     TGAImage image  (width, height, TGAImage::RGB);
     TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
-    M = Projection*ModelView;
-    M_inv = M.invert_transpose();    
+    M = Projection*ModelView;    
     Matrix transformation = Viewport*Projection*ModelView;
 
     for (int i=0; i<model->nfaces(); i++) {

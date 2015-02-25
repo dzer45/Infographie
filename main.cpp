@@ -134,16 +134,16 @@ int main(int argc, char** argv) {
     TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
     M = Projection*ModelView;
     M_inv = M.invert_transpose();    
+    Matrix transformation = Viewport*Projection*ModelView;
 
     for (int i=0; i<model->nfaces(); i++) {
         Vec4f coords[3];
         for (int j=0; j<3; j++) {
 		Uv.set_col(j,model->uv(i,j));
-		Vec4f transformation = embed<4>(model->vert(i, j));
-        	transformation = Viewport*M*transformation;
+		Vec4f position = embed<4>(model->vert(i, j));
+        	position = transformation*position;
         	varying_intensity[j] = std::max(0.f, model->normal(i, j)*light_dir);
-            	coords[j] = transformation;
-
+            	coords[j] = position;
         }
 	Vec2f A = proj<2>(coords[0]/coords[0][3]);
     	Vec2f B = proj<2>(coords[1]/coords[1][3]);
